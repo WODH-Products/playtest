@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>WODH Playtest</title>
+<meta property="og:title" content="WODH Playtest: three pull-puzzle prototypes">
+<meta property="og:description" content="Paper Pals, Thread Pull and Needle and Yarn. Playable in the browser, best on a phone.">
+<meta property="og:image" content="https://wodh-products.github.io/playtest/img/og.jpg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap">
+<style>
+/* A walnut sewing-and-craft table; three phone cards, each opening one prototype. */
+:root {
+  --table: #3F2414; --table-2: #5A3520; --cream: #FFF3DC; --cream-2: #F1DDBB; --ink: #4A2A14; --muted: #8A5A34;
+  --paper: #F7A06E; --linen: #EFE4CF; --green: #3FA35B; --green-deep: #23683A;
+  --font: "Fredoka", "Baloo 2", "Nunito", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: radial-gradient(ellipse at 50% 0%, var(--table-2), var(--table) 70%); color: var(--cream); font-family: var(--font); min-height: 100vh; }
+main { max-width: 1060px; margin: 0 auto; padding-block: calc(env(safe-area-inset-top, 0px) + 32px) calc(env(safe-area-inset-bottom, 0px) + 40px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { text-align: center; display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+.eyebrow { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--cream-2); opacity: 0.8; }
+h1 { margin: 0; font-size: clamp(30px, 6vw, 46px); line-height: 1.05; text-wrap: balance; }
+header p { margin: 0 auto; max-width: 560px; font-size: 18px; line-height: 1.45; color: var(--cream-2); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.card { display: flex; flex-direction: column; gap: 12px; background: var(--cream); color: var(--ink); border-radius: 24px; padding: 14px 14px 18px;
+  box-shadow: 0 0 0 5px #B9783F, 0 10px 0 5px #7E4A22, 0 18px 30px rgba(0,0,0,0.35); text-decoration: none; transition: transform .15s; }
+.card:hover { transform: translateY(-3px); }
+.card:focus-visible { outline: 4px solid #F7C844; outline-offset: 6px; }
+.shot { border-radius: 16px; overflow: hidden; aspect-ratio: 360 / 779; max-width: 100%; background: #ddd; }
+.shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card h2 { margin: 4px 4px 0; font-size: 26px; }
+.card p { margin: 0 4px; font-size: 16px; line-height: 1.4; color: var(--muted); min-height: 66px; }
+.play { margin-top: auto; align-self: stretch; text-align: center; background: var(--green); color: #fff; font-weight: 700; font-size: 20px; padding: 12px; border-radius: 14px; box-shadow: 0 4px 0 var(--green-deep); }
+footer { margin-top: 34px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--cream-2); opacity: 0.8; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; max-width: 380px; margin: 0 auto; } }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">WODH · playtest · November 2026</div>
+    <h1>Three pull-puzzle prototypes</h1>
+    <p>Each one opens in the browser. They play best on a phone: drag a piece to pull it out. Sound starts after your first tap.</p>
+  </header>
+  <div class="grid">
+    <a class="card" href="paper-pals/">
+      <div class="shot"><img src="img/pp.jpg" alt="Paper Pals: pencils held by origami animals on graph paper"></div>
+      <h2>Paper Pals</h2>
+      <p>Slide pencils out along their line. When a pencil leaves its origami pal, the pal unfolds and flutters away.</p>
+      <span class="play">Play Paper Pals</span>
+    </a>
+    <a class="card" href="thread-pull/">
+      <div class="shot"><img src="img/th.jpg" alt="Thread Pull: coloured cords stitched through a cloth"></div>
+      <h2>Thread Pull</h2>
+      <p>Pull a loose end and the cord unpicks hole by hole. A cord trapped under another stops at the crossing.</p>
+      <span class="play">Play Thread Pull</span>
+    </a>
+    <a class="card" href="needle-and-yarn/">
+      <div class="shot"><img src="img/ny.jpg" alt="Needle and Yarn: needles with yarn knots on linen"></div>
+      <h2>Needle and Yarn</h2>
+      <p>Pull a needle free and the yarn knot it held is stitched flat onto the fabric. Ropes are sewn down with their last needle.</p>
+      <span class="play">Play Needle and Yarn</span>
+    </a>
+  </div>
+  <footer>Prototypes for review, not released games. Sounds are CC0 recordings from Freesound and BigSoundBank.</footer>
+</main>
+</body>
+</html>
