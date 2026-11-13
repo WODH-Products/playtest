@@ -129,7 +129,9 @@ body.aiming #stage { cursor: crosshair; }
       i, x: r.x, y: r.y, d: r.d, dx: DIR[r.d][0], dy: DIR[r.d][1], len: r.len,
       color: r.color | 0, pos: r.start | 0, gone: false, how: null,
     }));
-    this.blocks = level.blocks.map((b, j) => ({ j, x: b.x, y: b.y, plank: b.plank | 0, alive: true, look: b.look | 0 }));
+    this.blocks = level.blocks.map((b, j) => ({ j, x: b.x, y: b.y, plank: b.plank | 0, alive: true, look: b.look | 0, horiz: b.horiz }));
+    // a plank's direction comes from its own cells (the stored flag can be missing)
+    for (const b of this.blocks) if (b.plank) { const mates = this.blocks.filter(o => o.plank === b.plank); b.horiz = mates.every(o => o.y === mates[0].y); }
     this.blockAt = new Map();
     for (const b of this.blocks) this.blockAt.set(K(b.x, b.y), b);
     this.plankAlive = {};
@@ -729,7 +731,7 @@ body.aiming #stage { cursor: crosshair; }
     let timeLeft = 180, timerOn = false, state = 'play';
     let drag = null, auto = null, aim = null, undoStack = [];
     const vis = [], blockFx = [], ghosts = [], bGhosts = [], pGhosts = [];
-    let lastInput = performance.now(), hintShown = false, comboN = 0, comboT = 0, intro = 0, doneAt = 0, captionStep = 0;
+    let lastInput = performance.now(), hintShown = false, comboN = 0, comboT = 0, intro = 0, doneAt = 0, captionStep = 0, cardTimer = 0;
     const hand = new Sh.Hand();
     let arrow = null;   // {x0,y0,x1,y1,t0}
 
@@ -773,6 +775,7 @@ body.aiming #stage { cursor: crosshair; }
 
     function startLevel(n) {
       levelNo = n; Sh.save(skin.key + ':level', n);
+      clearTimeout(cardTimer);
       lv = levelData(n);
       game = new S.Game(lv);
       vis.length = 0; for (const r of game.rods) vis.push({ pos: r.pos, shake: 0, glow: 0 });
@@ -848,7 +851,8 @@ body.aiming #stage { cursor: crosshair; }
       for (const e of ev) {
         if (e.type === 'break') {
           const b = game.blocks[e.block];
-          bGhosts.push({ j: e.block, t: 0, horiz: skin.holderHoriz ? skin.holderHoriz(game, b) : true });
+          bGhosts.push({ j: e.block, t: 0, by: e.by, horiz: skin.holderHoriz ? skin.holderHoriz(game, b) : true, dir: e.by >= 0 ? [game.rods[e.by].dx, game.rods[e.by].dy] : null });
+          if (e.by >= 0) vis[e.by].tail = b.look;   // the needle keeps a short tail of that yarn
           const now = performance.now();
           comboN = now - comboT < 1400 ? comboN + 1 : 0; comboT = now;
           Snd.play('note_' + (1 + Math.min(4, comboN)), { vol: 0.7, delay: 0.1 });
@@ -857,7 +861,7 @@ body.aiming #stage { cursor: crosshair; }
           if (lv.caption && lv.caption[1] && captionStep === 0) { captionStep = 1; showCaption(lv.caption[1]); }
         } else if (e.type === 'out') {
           const v = vis[e.rod];
-          const sp = drag && drag.i === e.rod ? Math.max(12, drag.vel || 0) : 14;
+          const sp = skin.exitSpeed || (drag && drag.i === e.rod ? Math.max(12, drag.vel || 0) : 14);
           ghosts.push({ i: e.rod, kind: 'out', t: 0, pos: v.pos, v: sp });
           Snd.play(Math.random() < 0.5 ? 'swoosh_1' : 'swoosh_2', { vol: 0.8, rate: 1.1 });
           Sh.haptic(12);
@@ -1054,7 +1058,7 @@ body.aiming #stage { cursor: crosshair; }
       if (skin.onWin) skin.onWin(B, game);
       coins += reward; Sh.save(skin.key + ':coins', coins);
       $('reward').textContent = '+' + reward;
-      setTimeout(() => { $('done').hidden = false; updateHud(); Snd.play('coin', { vol: 0.5 }); }, 900);
+      cardTimer = setTimeout(() => { if (state === 'won') { $('done').hidden = false; updateHud(); Snd.play('coin', { vol: 0.5 }); } }, 900);
     }
     function lose() {
       state = 'lost'; timerOn = false; drag = null; auto = null;
@@ -1119,7 +1123,7 @@ body.aiming #stage { cursor: crosshair; }
         v.shake = Math.max(0, v.shake - dt * 5);
         const sh = v.shake > 0 ? Math.sin(T * 70) * v.shake * B.cell * 0.04 : 0;
         const hintGlow = v.hint ? Math.max(0, 1 - (now - v.hint) / 2600) * (0.5 + 0.5 * Math.sin(T * 9)) : 0;
-        skin.drawRod(ctx, B, r, { pos: v.pos, ox: sh * Math.abs(r.dy), oy: sh * Math.abs(r.dx), alpha: 1, scale: popIn(introK, 0.1 + i * 0.03),
+        skin.drawRod(ctx, B, r, { pos: v.pos, ox: sh * Math.abs(r.dy), oy: sh * Math.abs(r.dx), alpha: 1, tail: v.tail, scale: popIn(introK, 0.1 + i * 0.03),
           glow: Math.max(drag && drag.i === i ? 1 : 0, hintGlow) }, T);
       }
       byRow.forEach((b) => { const j = b.j; if (b.plank) return;
@@ -1132,17 +1136,17 @@ body.aiming #stage { cursor: crosshair; }
         const cells = game.blocks.filter(b => b.plank === id);
         const dropping = pGhosts.find(p => p.id === id);
         if (!game.plankAlive[id] && !dropping) continue;
-        skin.drawPlank(ctx, B, { id, cells, horiz: cells[0].horiz }, { t: dropping ? dropping.t : -1, pop: popIn(introK, 0.25) }, T);
+        skin.drawPlank(ctx, B, { id, cells, horiz: cells.every(o => o.y === cells[0].y) }, { t: dropping ? dropping.t : -1, pop: popIn(introK, 0.25) }, T);
       }
       for (let k = pGhosts.length - 1; k >= 0; k--) { pGhosts[k].t += dt; if (pGhosts[k].t > (skin.plankDur || 0.9)) pGhosts.splice(k, 1); }
       // holders letting go, then pieces leaving, on top
       for (let k = bGhosts.length - 1; k >= 0; k--) {
         const g = bGhosts[k]; g.t += dt;
         skin.drawBreak(ctx, B, game.blocks[g.j], g.t, T, g);
-        if (g.t > (skin.breakDur || 1.0)) bGhosts.splice(k, 1);
+        if (g.t > (skin.breakDur || 1.0) || (skin.breakDone && skin.breakDone(game.blocks[g.j], g))) bGhosts.splice(k, 1);
       }
       for (const g of ghosts) if (g.kind !== 'fall') drawGhost(g, dt);
-      for (let k = ghosts.length - 1; k >= 0; k--) if (ghosts[k].t > 1.0) ghosts.splice(k, 1);
+      for (let k = ghosts.length - 1; k >= 0; k--) if (ghosts[k].t > (skin.exitFade || 1.0)) ghosts.splice(k, 1);
       Sh.drawParts(ctx, dt);
       drawArrow(now);
       hand.draw(ctx, dt, Sh.img.hand, B.cell * 2.1);
@@ -1153,8 +1157,8 @@ body.aiming #stage { cursor: crosshair; }
       if (g.delay > 0) { g.delay -= dt; skin.drawRod(ctx, B, r, { pos: g.pos, alpha: 1, scale: 1, glow: 0 }, 0); return; }
       g.t += dt;
       if (g.kind === 'out') {
-        g.pos += g.v * dt; g.v *= 1.03;
-        skin.drawRod(ctx, B, r, { pos: g.pos, alpha: Math.max(0, 1 - g.t / 0.7), scale: 1, glow: 0, flying: g.t }, 0);
+        g.pos += g.v * dt; if (!skin.exitSpeed) g.v *= 1.03;
+        skin.drawRod(ctx, B, r, { pos: g.pos, alpha: Math.max(0, 1 - g.t / (skin.exitFade || 0.7)), scale: 1, glow: 0, flying: g.t, tail: vis[g.i].tail }, 0);
       } else if (g.kind === 'fall') { // nothing holds it any more: it lifts off and drifts away
         const k = Math.min(1, g.t / 0.7);
         skin.drawRod(ctx, B, r, { pos: g.pos, ox: B.cell * 0.4 * E.inCubic(k) * (r.i % 2 ? 1 : -1), oy: -B.cell * 1.2 * E.inCubic(k), alpha: 1 - E.inCubic(k), scale: 1 + 0.12 * Math.sin(Math.min(1, k * 2) * Math.PI / 2), rot: 0.35 * k * (r.i % 2 ? 1 : -1), glow: 0 }, 0);
