@@ -125,6 +125,7 @@ body.aiming #stage { cursor: crosshair; }
   function Game(level) {
     this.level = level;
     this.w = level.w; this.h = level.h;
+    this.noFall = !!level.noFall;   // pieces left holding nothing stay until dragged out (Needle and Yarn)
     this.rods = level.rods.map((r, i) => ({
       i, x: r.x, y: r.y, d: r.d, dx: DIR[r.d][0], dy: DIR[r.d][1], len: r.len,
       color: r.color | 0, pos: r.start | 0, gone: false, how: null,
@@ -238,6 +239,7 @@ body.aiming #stage { cursor: crosshair; }
       for (const r of this.rods) {
         if (r.gone) continue;
         if (!this.threadsAt(r, r.pos)) {
+          if (r.i !== moved && this.noFall) continue;
           r.gone = true; r.how = r.i === moved ? 'out' : 'fall';
           ev.push({ type: r.how, rod: r.i });
           changed = true;
@@ -957,12 +959,13 @@ body.aiming #stage { cursor: crosshair; }
       if (r.gone) return;
       const lim = game.limits(i);
       if (d.moved < 8 && performance.now() - d.t0 < 400) {
-        // a tap: pull it all the way if its way out is clear, otherwise show what stops it
-        if (lim.exitAt != null) { pushUndo(); auto = { i, target: r.pos + lim.exitAt + 0.2, speed: 13 }; }
-        else { vis[i].pos = r.pos + Math.min(0.12, lim.max + 0.12); bump(i, lim.stopFwd); }
+        // a tap: pull it all the way if its way out is clear, otherwise show what stops it (drag-only games: just a nudge)
+        if (lim.exitAt != null && !skin.dragOnly) { pushUndo(); auto = { i, target: r.pos + lim.exitAt + 0.2, speed: 13 }; }
+        else if (lim.exitAt == null) { vis[i].pos = r.pos + Math.min(0.12, lim.max + 0.12); bump(i, lim.stopFwd); }
+        if (skin.dragOnly) { const from = vis[i].pos, to = r.pos; Sh.tween(0.14, t => { if (!game.rods[i].gone) vis[i].pos = Sh.lerp(from, to, E.outCubic(t)); }); }
         return;
       }
-      if (d.vel > 5 && lim.exitAt != null) { auto = { i, target: r.pos + lim.exitAt + 0.2, speed: Math.max(13, d.vel) }; return; }
+      if (!skin.dragOnly && d.vel > 5 && lim.exitAt != null) { auto = { i, target: r.pos + lim.exitAt + 0.2, speed: Math.max(13, d.vel) }; return; }
       const from = vis[i].pos, to = r.pos;
       Sh.tween(0.14, t => { if (!game.rods[i].gone && !(drag && drag.i === i)) vis[i].pos = Sh.lerp(from, to, E.outCubic(t)); });
     }
